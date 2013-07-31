@@ -7,20 +7,36 @@ class MoviesController < ApplicationController
   end
 
   def index
+    search_args = [:all]
+
+    # Fetch the list of possible movie ratings
+    @all_ratings = Movie.ratings
+
+    # Check for the ratings parameter and filter the movies accordingly
+    if params.has_key? :ratings
+      @ratings = params[:ratings]
+      search_args << {:conditions => ["rating IN (?)", @ratings.each_key]}
+    else
+      @ratings = {}
+      @all_ratings.each do |key|
+        @ratings[key] = "yes"
+      end
+    end
+
     # Check for the sorted_by parameter and sort the movies accordingly
     if params.has_key? :sorted_by
       @sorted_by = params[:sorted_by]
       if params[:sorted_by] == "title"
-        @movies = Movie.all(:order => :title)
+        search_args << {:order => :title}
       elsif params[:sorted_by] == "release_date"
-        @movies = Movie.all(:order => :release_date)
-      else
-        @movies = Movie.all
+        search_args << {:order => :release_date}
       end
     else
       @sorted_by = nil
-      @movies = Movie.all
     end
+
+    # Find all movies satisfying the given search criteria
+    @movies = Movie.find(*search_args)
   end
 
   def new

@@ -9,6 +9,41 @@ class MoviesController < ApplicationController
   def index
     search_args = [:all]
 
+    # Reinstate previous sort and filter options from the session[] hash
+    redirect = false
+    if params.has_key? :ratings
+      session[:ratings] = params[:ratings]
+    elsif session.has_key? :ratings and !params.has_key? :ratings
+      params[:ratings] = session[:ratings]
+      redirect = true
+    elsif !session.has_key? :ratings and !params.has_key? :ratings
+      ratings = {}
+      Movie.ratings.each do |key|
+        ratings[key] = "yes"
+      end
+      params[:ratings] = ratings
+      session[:ratings] = ratings
+      redirect = true
+    end
+    if params.has_key? :sorted_by
+      session[:sorted_by] = params[:sorted_by]
+    elsif session.has_key? :sorted_by and !params.has_key? :sorted_by
+      params[:sorted_by] = session[:sorted_by]
+      redirect = true
+    elsif !session.has_key? :ratings and !params.has_key? :ratings
+      sorted_by = nil
+      params[:sorted_by] = sorted_by
+      session[:sorted_by] = sorted_by
+      redirect = true
+    end
+
+    # If settings have been loaded from the session[] hash, reload
+    # the page with the correct params[] to maintain RESTful state
+    if redirect
+      flash.keep
+      redirect_to params
+    end
+
     # Fetch the list of possible movie ratings
     @all_ratings = Movie.ratings
 
@@ -16,11 +51,6 @@ class MoviesController < ApplicationController
     if params.has_key? :ratings
       @ratings = params[:ratings]
       search_args << {:conditions => ["rating IN (?)", @ratings.each_key]}
-    else
-      @ratings = {}
-      @all_ratings.each do |key|
-        @ratings[key] = "yes"
-      end
     end
 
     # Check for the sorted_by parameter and sort the movies accordingly
